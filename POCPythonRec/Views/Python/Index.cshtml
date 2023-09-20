@@ -1,0 +1,77 @@
+﻿@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+    ViewData["Title"] = "Rec";
+}
+
+<!--
+   Python scripts css
+-->
+
+<link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+<script defer src="https://pyscript.net/latest/pyscript.js"></script>
+
+
+<py-config>
+    packages = ["numpy", "pandas", "scikit-learn"]
+    [[fetch]]
+    files = ["accommodation.csv", "Address.csv"]
+</py-config>
+<div class="row">
+    <div class="col-lg-12">
+        <h2>Recommedation</h2>
+        <py-script>
+            import pandas as pd
+            import numpy as np
+            import sklearn
+            from sklearn.metrics.pairwise import cosine_similarity
+            from sklearn.feature_extraction.text import TfidfVectorizer
+            import os
+
+            from sklearn.model_selection import train_test_split
+            from sklearn.metrics import mean_absolute_percentage_error
+
+
+            columns= ['Id','AccomodationName','PictureUrl','Price','AddressId','rating','RoomTypeId']
+            accommodations = pd.read_csv('accommodation.csv', sep=',', names=columns, encoding='latin-1', engine='python')
+            accommodations.head()
+
+            columns= ['AddressId','StreetName','Surburb','City','PostalCode']
+            addresses = pd.read_csv('Address.csv',sep=',', names=columns, encoding='latin-1',engine='python')
+            addresses.head()
+
+            df = pd.merge(accommodations,addresses)
+            # Display 20 movies with highest ratings
+            df[['AccomodationName','Price','rating','StreetName','Surburb','AddressId']].sort_values('rating', ascending=False).head(20)
+
+            accommodations_combined = accommodations['Price'].astype(str).str.replace('|', ' ')+accommodations['rating'].astype(str).str.replace('|', ' ')+accommodations['RoomTypeId'].astype(str).str.replace('|', ' ')+addresses['Surburb'].astype(str).str.replace('|', ' ')
+
+            # Create a TfidfVectorizer object to transform the movie genres into a Tf-idf representation
+            tfidf = TfidfVectorizer()
+            tfidf_matrix = tfidf.fit_transform(accommodations_combined)
+
+            # Calculate the cosine similarity matrix between the accommodation
+            cosine_similarity = cosine_similarity(tfidf_matrix)
+
+            # Create a dataframe with the cosine similarity scores
+            similarity_df = pd.DataFrame(cosine_similarity, index=accommodations['AccomodationName'], columns=accommodations['AccomodationName'])
+
+            # Ask the user for a accommodation they like
+            accommodation = input('Enter a accommodation you like: ')
+
+            # Find the index of the movie in the similarity dataframe
+            accommodation_index = similarity_df.index.get_loc(accommodation)
+
+            # Get the top 10 most similar movies to the movie
+            top_10 = similarity_df.iloc[accommodation_index].sort_values(ascending=False)[1:11]
+
+            # Print the top 10 most similar movies to the movie
+            print(f'Top 10 similar accomodations to {accommodation}:')
+            print(top_10)
+
+
+        </py-script>
+
+    </div>
+</div>
